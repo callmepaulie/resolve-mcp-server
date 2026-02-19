@@ -1,106 +1,223 @@
 # DaVinci Resolve MCP Server
 
-Control DaVinci Resolve with AI via the Model Context Protocol. Edit video, color grade, render, and analyze frames — all through natural language.
+**Talk to your timeline.** Control DaVinci Resolve with natural language through Claude — browse projects, swap clips, color grade, render for YouTube, and see what's in any frame with AI vision. From your desk or from your phone, anywhere in the world.
 
-**45 tools** across 11 categories: connection, projects, timelines, media, editing, color grading, markers, titles, rendering, Fusion, and AI vision.
+```
+You:    "Replace the b-roll at 13:22 with the South Pole takeoff shot"
+Claude: Done. Replaced AOA_CLIP_04 with A663C012_SOUTH_POLE_TAKE_OFF on V2.
+        Same position, same duration, video only — your interview audio is untouched.
+```
 
-## Features
+---
 
-- **Edit by voice** — "Add the b-roll clip to track 2", "Zoom in to 150%", "Apply the Kodak film look"
-- **Color grade** — Apply LUTs, create color versions, export grades
-- **Render anywhere** — Quick export for YouTube, TikTok, Vimeo with one command
-- **AI vision** — "What's in this shot?", "Is there a person at the podium?", "How many people are visible?"
-- **Works with Claude Desktop, claude.ai, and Claude Mobile** via stdio or HTTP transport
+## What This Is
+
+An [MCP server](https://modelcontextprotocol.io) that connects Claude to a running DaVinci Resolve instance. **53 tools** across 11 categories give Claude full read/write access to your projects, timelines, media pool, color page, and render queue — plus AI-powered frame analysis via [Moondream](https://moondream.ai).
+
+This isn't a toy. It edits. It replaced a clip on a multi-track documentary timeline, matched the duration, preserved the audio, and exported the result for YouTube. All through conversation.
+
+## What You Can Do
+
+### Edit by talking
+```
+"Open the tutorial project"
+"Switch to the Full Documentary timeline"
+"What clips are on V2?"
+"Replace clip 2 on V2 with the milky way shot"
+"Zoom in to 120% on the interview clip"
+"Add a blue marker here that says 'Great take'"
+"Export this for YouTube"
+```
+
+### See through your timeline with AI vision
+```
+"What's in this frame?"
+→ A wide shot of a beach in St. Maarten with an airplane on final approach,
+  turquoise water, and spectators watching from behind a chain-link fence.
+
+"Is there a person at the podium?"
+→ Yes, there is a person standing at the podium on the left side of the frame.
+
+"How many people are visible?"
+→ 4
+```
+
+### Control Resolve from your phone
+The server runs over HTTP with a Cloudflare tunnel, so you can edit from your couch, your car, or another continent. Same tools, same capabilities — just talking to Claude on your phone.
+
+---
+
+## The 53 Tools
+
+| Category | Count | What they do |
+|----------|-------|-------------|
+| **Connection** | 4 | Status, page navigation, reconnect |
+| **Project** | 6 | List, load, save, create projects, read/write settings |
+| **Timeline** | 8 | List/switch timelines, playhead control, track inspection, create new |
+| **Media** | 5 | Browse media pool, import clips, create bins, append to timeline |
+| **Editing** | 7 | Transform, speed, enable/disable, compound clips, **delete clips, replace clips** |
+| **Color** | 6 | Apply LUTs, create/load color versions, export grades |
+| **Markers** | 3 | Add, list, delete timeline markers |
+| **Titles** | 2 | Insert Fusion Text+ titles, modify text content |
+| **Render** | 6 | Quick export (YouTube/Vimeo/TikTok), custom render jobs, export EDL/FCPXML |
+| **Fusion** | 3 | Access Fusion compositions and tools |
+| **Vision** | 3 | AI scene description, object detection, visual Q&A |
+
+---
 
 ## Quick Start
 
-### 1. Install dependencies
+### Prerequisites
+- **DaVinci Resolve** (Free or Studio) running on the same machine
+- **Python 3.10+** (tested with 3.14)
+- A [Moondream API key](https://console.moondream.ai) (free — for AI vision features)
+
+### 1. Clone and install
 
 ```bash
-cd ~/resolve-mcp-server
+git clone https://github.com/guycochran/resolve-mcp-server.git
+cd resolve-mcp-server
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Configure Claude Desktop
+### 2. Configure your API key
 
-Add to `~/.claude/claude_desktop_config.json`:
+```bash
+cp .env.example .env
+# Edit .env and add your Moondream API key
+```
+
+### 3. Add to Claude Desktop
+
+Add to your Claude Desktop MCP config (`~/.claude/claude_desktop_config.json`):
 
 ```json
 {
   "mcpServers": {
     "resolve": {
-      "command": "/Users/guycochranclawdbot/resolve-mcp-server/start.sh",
-      "env": {
-        "MOONDREAM_API_KEY": "your_key_here"
-      }
+      "command": "/path/to/resolve-mcp-server/start.sh"
     }
   }
 }
 ```
 
-### 3. Make sure Resolve is running
-
-The server connects to a running DaVinci Resolve instance on the same machine.
-
-### 4. Talk to your editor
+### 4. Open Resolve and start talking
 
 > "What project am I working on?"
-> "Show me all the timelines"
-> "Apply the Kodak 2383 film look to the current clip"
-> "Export this timeline for YouTube"
-> "What's visible in this frame?"
+
+That's it. Claude can now see and control everything in Resolve.
+
+---
 
 ## Remote Access (HTTP Mode)
 
-For controlling Resolve from your phone or claude.ai:
+Control Resolve from anywhere — your phone, a tablet, another computer.
 
 ```bash
-TRANSPORT=http PORT=3001 MOONDREAM_API_KEY=your_key python src/server.py
+# Start the server in HTTP mode
+TRANSPORT=http PORT=3001 .venv/bin/python3 src/server.py
 ```
 
-Pair with a Cloudflare tunnel for worldwide access:
+### With Cloudflare Tunnel (worldwide access)
 
 ```bash
-cloudflared tunnel --url http://localhost:3001
+# Add to your cloudflared config:
+#   hostname: resolve.yourdomain.com
+#     service: http://localhost:3001
+
+cloudflared tunnel run
 ```
 
-## Vision / Moondream
+Now point any MCP client at `https://resolve.yourdomain.com/mcp` and you're editing remotely.
 
-The server integrates with [Moondream](https://moondream.ai) for AI-powered frame analysis:
+---
 
-- `resolve_describe_frame` — Natural language scene description
-- `resolve_detect_in_frame` — Object detection with bounding boxes
-- `resolve_ask_about_frame` — Visual Q&A ("How many people?", "What color is the background?")
+## How Clip Replacement Works
 
-Get a free API key at [console.moondream.ai](https://console.moondream.ai).
+The Resolve scripting API has no overwrite edit or three-point edit. We built one.
 
-## Requirements
+`resolve_replace_clip` performs a two-step operation:
 
-- DaVinci Resolve (Free or Studio) running on the same machine
-- Python 3.10+
-- `mcp[cli]`, `httpx`, `Pillow`
+1. **Read** the old clip's exact timeline position and duration
+2. **Delete** the old clip (no ripple — preserves the gap)
+3. **Insert** the new clip at the identical record position with matching duration
+
+```python
+# What happens under the hood:
+timeline.DeleteClips([old_clip], False)
+pool.AppendToTimeline([{
+    "mediaPoolItem": new_item,
+    "trackIndex": 2,
+    "recordFrame": 86734,       # exact same position
+    "startFrame": 0,
+    "endFrame": 120,            # matches original duration
+    "mediaType": 1              # video only — preserves audio
+}])
+```
+
+This means Claude can swap b-roll, try alternate takes, and revert — all through conversation.
+
+---
+
+## How AI Vision Works
+
+The server grabs the current frame from Resolve, compresses it via Pillow (6MB PNG down to ~250KB JPEG), and sends it to the Moondream vision API.
+
+Three tools:
+- **`resolve_describe_frame`** — "What's in this shot?"
+- **`resolve_detect_in_frame`** — Find objects with bounding boxes
+- **`resolve_ask_about_frame`** — Visual Q&A about the frame
+
+Use cases: automated scene logging, accessibility descriptions, content verification, shot matching.
+
+---
+
+## Architecture
+
+```
+Phone/Tablet ──── HTTPS ────→ Cloudflare Tunnel ────→ localhost:3001
+                                                           │
+Claude Desktop ── stdio ──────────────────────────────────→│
+                                                           │
+                                                   Resolve MCP Server
+                                                   (Python + FastMCP)
+                                                           │
+                                              ┌────────────┼────────────┐
+                                              ▼            ▼            ▼
+                                        DaVinci       Moondream      Cloudflare
+                                        Resolve       Vision API      Tunnel
+                                        (local)       (cloud)        (cloud)
+```
 
 ## Project Structure
 
 ```
 src/
-├── server.py                    # Main entry point
+├── server.py                    # FastMCP entry point (stdio + HTTP)
 ├── services/
 │   ├── resolve_connection.py    # Resolve API connection management
-│   └── moondream.py             # Moondream vision API client
+│   └── moondream.py             # Moondream vision API client + image prep
 └── tools/
     ├── connection.py            # Status, page navigation
     ├── project.py               # Project management
     ├── timeline.py              # Timeline operations
     ├── media.py                 # Media pool management
-    ├── editing.py               # Clip properties, transform
-    ├── color.py                 # LUTs, color versions
+    ├── editing.py               # Transform, delete, replace clips
+    ├── color.py                 # LUTs, color versions, grade export
     ├── markers.py               # Timeline markers
     ├── titles.py                # Fusion titles
     ├── render.py                # Rendering & export
     ├── fusion.py                # Fusion compositions
     └── vision.py                # AI frame analysis
 ```
+
+## Requirements
+
+- `mcp[cli]` — Model Context Protocol SDK
+- `httpx` — HTTP client for Moondream API
+- `Pillow` — Image compression (PNG → JPEG for vision pipeline)
 
 ## License
 
