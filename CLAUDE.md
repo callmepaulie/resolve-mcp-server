@@ -181,6 +181,7 @@ print(resolve.GetProductName(), resolve.GetVersionString())
 - Endpoints: `/caption`, `/detect`, `/query`, `/point`
 
 ### Resolve API constraints
+- **Requires DaVinci Resolve Studio (paid)** — the scripting API is not available in the free version
 - Resolve must be running on the same machine
 - Frame export needs Color or Edit page active
 - Cannot add transitions (use Cmd+T keyboard shortcut)

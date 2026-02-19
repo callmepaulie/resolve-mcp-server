@@ -68,9 +68,9 @@ The server runs over HTTP with a Cloudflare tunnel, so you can edit from your co
 ## Quick Start
 
 ### Prerequisites
-- **DaVinci Resolve** (Free or Studio) running on the same machine
+- **DaVinci Resolve Studio** (paid — the scripting API is not available in the free version of Resolve)
 - **Python 3.10+** (tested with 3.14)
-- A [Moondream API key](https://console.moondream.ai) (free — for AI vision features)
+- A [Moondream API key](https://console.moondream.ai) (free tier available — for AI vision features). Sign up at [console.moondream.ai](https://console.moondream.ai) to get your key. Moondream charges per API call, but the free tier is generous for normal editing use.
 
 ### 1. Clone and install
 
@@ -163,7 +163,9 @@ This means Claude can swap b-roll, try alternate takes, and revert — all throu
 
 ## How AI Vision Works
 
-The server grabs the current frame from Resolve, compresses it via Pillow (6MB PNG down to ~250KB JPEG), and sends it to the Moondream vision API.
+The server uses [Moondream](https://moondream.ai) Vision Language Models (VLMs) for AI-powered frame analysis. It grabs the current frame from Resolve, compresses it via Pillow (6MB PNG down to ~250KB JPEG), and sends it to the Moondream cloud API.
+
+Sign up at [console.moondream.ai](https://console.moondream.ai) (free tier available) to get your API key.
 
 Three tools:
 - **`resolve_describe_frame`** — "What's in this shot?"
@@ -215,6 +217,7 @@ src/
 
 ## Requirements
 
+- **DaVinci Resolve Studio** — The scripting API requires the paid Studio version
 - `mcp[cli]` — Model Context Protocol SDK
 - `httpx` — HTTP client for Moondream API
 - `Pillow` — Image compression (PNG → JPEG for vision pipeline)
