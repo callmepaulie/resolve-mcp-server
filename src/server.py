@@ -13,12 +13,8 @@ Usage:
     TRANSPORT=http PORT=3001 python src/server.py
 """
 
-# Redirect print to stderr so stdout stays clean for MCP JSON-RPC
 import sys
 import os
-
-_orig_stdout = sys.stdout
-sys.stdout = sys.stderr
 
 # Add the src directory to Python path for relative imports
 _project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
