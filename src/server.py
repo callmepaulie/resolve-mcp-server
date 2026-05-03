@@ -38,7 +38,7 @@ mcp = FastMCP(
 )
 
 # Register all tool modules
-from src.tools import connection, project, timeline, media, editing, color, markers, titles, render, fusion, vision
+from src.tools import connection, project, timeline, media, editing, color, markers, titles, render, fusion, vision, motion
 
 connection.register(mcp)
 project.register(mcp)
@@ -51,6 +51,7 @@ titles.register(mcp)
 render.register(mcp)
 fusion.register(mcp)
 vision.register(mcp)
+motion.register(mcp)
 
 
 def main():
