@@ -4,7 +4,7 @@ You are controlling DaVinci Resolve via the MCP tools registered by this server.
 
 ## Project Status
 
-**Built and verified working.** 53 tools across 11 categories, plus Moondream AI vision.
+**Built and verified working.** 54 tools across 12 categories: Moondream AI vision plus optical-flow camera-motion classification.
 
 ### What's been tested end-to-end:
 - Server starts in stdio mode (for Claude Desktop) and HTTP mode (for remote/mobile)
@@ -52,7 +52,8 @@ resolve-mcp-server/
 │       ├── titles.py                # 2 tools
 │       ├── render.py                # 6 tools
 │       ├── fusion.py                # 3 tools
-│       └── vision.py                # 3 tools
+│       ├── vision.py                # 3 tools
+│       └── motion.py                # 1 tool (optical-flow motion classifier)
 ├── .env                             # MOONDREAM_API_KEY (do NOT commit)
 ├── .env.example
 ├── .venv/                           # Python 3.14 virtualenv (Homebrew)
@@ -86,6 +87,7 @@ resolve-mcp-server/
 | Render | 6 | Quick export, render jobs, timeline export |
 | Fusion | 3 | Fusion comp and tool management |
 | Vision | 3 | AI frame analysis (Moondream) |
+| Motion | 1 | Camera-motion classifier (optical flow): static / push / pull / pan / tilt / roll |
 
 ## Common Workflows
 
@@ -124,6 +126,11 @@ resolve-mcp-server/
 2. `resolve_set_playhead(frame)` — navigate to the moment
 3. `resolve_describe_frame()` — AI describes what's in the shot
 4. `resolve_add_marker(frame, "Blue", "AI: Scene Description", note)` — log the description as a marker
+
+### "Tag a clip with DP language (composition + motion)"
+1. `resolve_describe_frame()` or `resolve_ask_about_frame(...)` — composition, lighting, subject (single-frame VLM)
+2. `resolve_classify_motion(clip_name="dji_fly_...")` — camera motion class (push/pan/tilt/roll/static) from optical flow on the source media
+3. Combine into shot-log metadata (Description / Keywords / Shot / Camera) via `media_pool_item.set_metadata` (use the single key/value form — the dict form has been observed to silently return `success: false` against samuelgursky's wrapper)
 
 ## Running the Server
 
