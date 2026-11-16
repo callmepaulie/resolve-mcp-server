@@ -12,7 +12,7 @@ Claude: Done. Replaced AOA_CLIP_04 with A663C012_SOUTH_POLE_TAKE_OFF on V2.
 
 ## What This Is
 
-An [MCP server](https://modelcontextprotocol.io) that connects Claude to a running DaVinci Resolve instance. **53 tools** across 11 categories give Claude full read/write access to your projects, timelines, media pool, color page, and render queue — plus AI-powered frame analysis via [Moondream](https://moondream.ai).
+An [MCP server](https://modelcontextprotocol.io) that connects Claude to a running DaVinci Resolve instance. **54 tools** across 12 categories give Claude full read/write access to your projects, timelines, media pool, color page, and render queue — plus AI-powered frame analysis via [Moondream](https://moondream.ai) and camera-motion classification via optical flow.
 
 This isn't a toy. It edits. It replaced a clip on a multi-track documentary timeline, matched the duration, preserved the audio, and exported the result for YouTube. All through conversation.
 
@@ -47,7 +47,7 @@ The server runs over HTTP with a Cloudflare tunnel, so you can edit from your co
 
 ---
 
-## The 53 Tools
+## The 54 Tools
 
 | Category | Count | What they do |
 |----------|-------|-------------|
@@ -62,6 +62,7 @@ The server runs over HTTP with a Cloudflare tunnel, so you can edit from your co
 | **Render** | 6 | Quick export (YouTube/Vimeo/TikTok), custom render jobs, export EDL/FCPXML |
 | **Fusion** | 3 | Access Fusion compositions and tools |
 | **Vision** | 3 | AI scene description, object detection, visual Q&A |
+| **Motion** | 1 | Classify camera motion (push, pan, tilt, roll, static) via optical flow |
 
 ---
 
@@ -70,6 +71,7 @@ The server runs over HTTP with a Cloudflare tunnel, so you can edit from your co
 ### Prerequisites
 - **DaVinci Resolve Studio** (paid — the scripting API is not available in the free version of Resolve)
 - **Python 3.10+** (tested with 3.14)
+- **ffmpeg / ffprobe** on `$PATH` (used by the motion classifier for frame sampling). On macOS: `brew install ffmpeg`.
 - A [Moondream API key](https://console.moondream.ai) (free tier available — for AI vision features). Sign up at [console.moondream.ai](https://console.moondream.ai) to get your key. Moondream charges per API call, but the free tier is generous for normal editing use.
 
 ### 1. Clone and install
@@ -176,6 +178,32 @@ Use cases: automated scene logging, accessibility descriptions, content verifica
 
 ---
 
+## How Motion Classification Works
+
+Single-frame VLMs are blind to camera movement — they see one still and can't tell a static shot from a push-in. The motion classifier closes that gap with a local, camera-agnostic, telemetry-free pipeline:
+
+1. **Sample N frames** evenly across the clip via ffmpeg (`-ss` seek + `scale=640`)
+2. **Compute Farneback dense optical flow** between consecutive samples (OpenCV)
+3. **Decompose** the flow field into translation (mean dx/dy), divergence (radial), and curl (rotational) components
+4. **Classify** the dominant motion: `static`, `push-in`, `pull-out`, `pan/truck-L/R`, `tilt-U/D` (or `pedestal-U/D`), `roll-CW/CCW`, or combinations
+
+Tunings:
+- Curl is suppressed when divergence dominates (gimbal-stabilized cameras rarely actually roll, and lens distortion under translation creates spurious curl when the dominant subject is off-center)
+- Thresholds are normalized by frame width so they're scale-invariant
+
+```
+"Classify motion in the drone clip"
+→ {
+    "classification": "push-in",
+    "components": [{"label": "push-in", "weight": 0.18}],
+    "normalized": {"divergence": -0.18, "rms": 2.6, ...}
+  }
+```
+
+Telemetry-based motion analysis (DJI SRT, GoPro GPMF, iPhone gyro track) would be more accurate when source files retain it, but optical flow is the fallback that works on any video file ffmpeg can decode.
+
+---
+
 ## Architecture
 
 ```
@@ -212,15 +240,19 @@ src/
     ├── titles.py                # Fusion titles
     ├── render.py                # Rendering & export
     ├── fusion.py                # Fusion compositions
-    └── vision.py                # AI frame analysis
+    ├── vision.py                # AI frame analysis (Moondream)
+    └── motion.py                # Optical-flow camera-motion classifier
 ```
 
 ## Requirements
 
 - **DaVinci Resolve Studio** — The scripting API requires the paid Studio version
+- **ffmpeg / ffprobe** on `$PATH` — used by the motion classifier
 - `mcp[cli]` — Model Context Protocol SDK
 - `httpx` — HTTP client for Moondream API
 - `Pillow` — Image compression (PNG → JPEG for vision pipeline)
+- `opencv-python-headless` — Optical flow computation (Farneback)
+- `numpy` — Flow field aggregation
 
 ## License
 

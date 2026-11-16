@@ -20,7 +20,7 @@
 |                  |   |                          |   |                         |
 +------------------+   |  Transport: HTTP :3001   |   |  Scripting API          |
                        |                          |   |  (fusionscript.so)      |
-+------------------+   |  53 MCP Tools:           |   |                         |
++------------------+   |  54 MCP Tools:           |   |                         |
 |                  |   |  - Connection (4)        |   |  Project Manager        |
 |  Claude Desktop  |-->|  - Project (6)           |-->|  Media Pool             |
 |  (This Mac)     |   |  - Timeline (8)          |   |  Timelines              |
@@ -32,6 +32,7 @@
                        |  - Render (6)            |
                        |  - Fusion (3)            |
                        |  - Vision (3)            |
+                       |  - Motion (1)            |
                        |                          |
                        +------------+-------------+
                                     |
@@ -93,6 +94,37 @@ Resolve MCP Server (Uvicorn, streamable-http)
     v
 DaVinci Resolve
 ```
+
+### Camera Motion Classification Pipeline
+```
+Source media file (file_path or media-pool clip lookup)
+    |
+    | ffprobe -> total duration (if end_sec omitted)
+    v
+ffmpeg -ss <t> -vframes 1 -vf scale=640 -> PNG (per sample)
+    |
+    | N evenly-spaced frames sampled into a tempdir
+    v
+OpenCV cv2.calcOpticalFlowFarneback (consecutive pairs)
+    |
+    | Per-frame-pair feature vector: mean_dx, mean_dy, divergence, curl, rms
+    v
+Aggregate (mean across pairs) + width-normalize
+    |
+    | Threshold + classify dominant motion
+    v
+{
+  "classification": "push-in + pan/truck-R",
+  "components": [{"label": "push-in", "weight": ...}, ...],
+  "normalized": {"dx": ..., "dy": ..., "divergence": ..., "curl": ..., "rms": ...}
+}
+```
+
+Notes:
+- Pure-Python local pipeline; no API calls, no Resolve coupling beyond the optional clip-name lookup
+- `divergence < 0` -> radial inward flow -> camera pushing in; `> 0` -> pulling out
+- `curl` is suppressed when `|curl| <= |divergence|` to kill spurious roll readings on push/pull shots (lens distortion artifact when subject is off-center)
+- Thresholds are normalized by frame width (units of "% frame width per inter-sample step") so behavior is scale-invariant
 
 ### AI Vision Pipeline
 ```
@@ -211,12 +243,13 @@ New clip sits at same timeline position with same duration
 |       +-- render.py              # resolve_quick_export, resolve_start_render, ...
 |       +-- fusion.py              # resolve_get_fusion_comps, ...
 |       +-- vision.py              # resolve_describe_frame, resolve_detect_in_frame, ...
+|       +-- motion.py              # resolve_classify_motion (optical-flow camera-motion classifier)
 |
 +-- .venv/                         # Python 3.14 virtualenv (Homebrew)
 +-- .env                           # MOONDREAM_API_KEY (not committed)
 +-- .env.example                   # Template for .env
 +-- start.sh                       # Launcher for Claude Desktop (sets env vars)
-+-- requirements.txt               # mcp[cli], httpx, Pillow
++-- requirements.txt               # mcp[cli], httpx, Pillow, opencv-python-headless, numpy
 +-- CLAUDE.md                      # Instructions for Claude when using this server
 +-- README.md                      # Human documentation
 +-- ARCHITECTURE.md                # This file
