@@ -248,7 +248,7 @@ src/
 
 - **DaVinci Resolve Studio** — The scripting API requires the paid Studio version
 - **ffmpeg / ffprobe** on `$PATH` — used by the motion classifier
-- `mcp[cli]` — Model Context Protocol SDK
+- `mcp[cli]` (1.x, `<2`) — Model Context Protocol SDK. Pinned below 2.0 because the code imports `mcp.server.fastmcp.FastMCP`, which mcp 2.x renamed.
 - `httpx` — HTTP client for Moondream API
 - `Pillow` — Image compression (PNG → JPEG for vision pipeline)
 - `opencv-python-headless` — Optical flow computation (Farneback)

@@ -57,7 +57,7 @@ resolve-mcp-server/
 ├── .env                             # MOONDREAM_API_KEY (do NOT commit)
 ├── .env.example
 ├── .venv/                           # Python 3.14 virtualenv (Homebrew)
-├── requirements.txt                 # mcp[cli], httpx, Pillow
+├── requirements.txt                 # mcp[cli]<2, httpx, Pillow, opencv, numpy
 ├── start.sh                         # Launcher for Claude Desktop
 ├── CLAUDE.md
 └── README.md
@@ -176,6 +176,7 @@ print(resolve.GetProductName(), resolve.GetVersionString())
 - PEP 668 requires venv for Homebrew Python — do NOT pip install globally
 
 ### FastMCP quirks
+- **mcp must stay on 1.x** (`mcp[cli]>=1.0.0,<2` in requirements.txt). mcp 2.x renamed FastMCP to `MCPServer` (`mcp.server.mcpserver`), so `from mcp.server.fastmcp import FastMCP` fails on 2.x. Migrating to the 2.x API is a separate task.
 - Constructor accepts `host`, `port`, `json_response` — NOT `version`
 - `run()` only accepts `transport` and `mount_path` — host/port go in constructor
 - Transport values: `"stdio"`, `"sse"`, `"streamable-http"`
